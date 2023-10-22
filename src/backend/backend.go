@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 )
 
@@ -32,15 +33,16 @@ func main() {
 	r := mux.NewRouter()
 	// Define API routes
 	r.HandleFunc("/api/username", usernameHandler).Methods("GET")
+	r.HandleFunc("/test", testHandler).Methods("POST")
 
 	currentDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	distDir := filepath.Join(currentDir, "dist")
 	spa := spaHandler{staticPath: distDir, indexPath: "index.html"}
 	r.PathPrefix("/").Handler(spa)
+	handler := csrf.Protect([]byte("my32ByteSecretKeyForCSRF123456"), csrf.HttpOnly(false), csrf.Secure(false), csrf.Path("/"))(r)
 
 	log.Println("Http Listening")
-	http.ListenAndServe(
-		port, r)
+	http.ListenAndServe(port, handler)
 }
 
 func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
